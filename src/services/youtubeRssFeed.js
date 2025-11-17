@@ -20,18 +20,28 @@ export async function fetchYouTubeFeed() {
     const xmlText = await response.text();
     const result = parser.parse(xmlText);
 
+    const channelTitle = result.feed?.title || '';
+    const channelAuthor = result.feed?.author?.name || '';
+    const channelLink = result.feed?.author?.uri || '';
+
     const entries = result.feed?.entry || [];
     const videos = Array.isArray(entries) ? entries : [entries];
 
-    return videos.map(video => ({
-      id: video['yt:videoId'],
-      title: video.title,
-      thumbnail: video['media:group']?.['media:thumbnail']?.['@_url'] || '',
-      published: video.published,
-      link: video.link?.['@_href'] || `https://www.youtube.com/watch?v=${video['yt:videoId']}`,
-      author: video.author?.name || '',
-      description: video['media:group']?.['media:description'] || ''
-    }));
+    return {
+      channelTitle,
+      channelAuthor,
+      channelLink,
+      channelId: YOUTUBE_CHANNEL_ID,
+      videos: videos.slice(0, 3).map(video => ({
+        id: video['yt:videoId'],
+        title: video.title,
+        thumbnail: video['media:group']?.['media:thumbnail']?.['@_url'] || '',
+        published: video.published,
+        link: video.link?.['@_href'] || `https://www.youtube.com/watch?v=${video['yt:videoId']}`,
+        author: video.author?.name || '',
+        description: video['media:group']?.['media:description'] || ''
+      }))
+    };
   } catch (error) {
     console.error('Error fetching YouTube RSS feed:', error);
     throw error;

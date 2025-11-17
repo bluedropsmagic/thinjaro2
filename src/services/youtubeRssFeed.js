@@ -23,6 +23,7 @@ export async function fetchYouTubeFeed() {
     const channelTitle = result.feed?.title || '';
     const channelAuthor = result.feed?.author?.name || '';
     const channelLink = result.feed?.author?.uri || '';
+    const channelAvatar = `https://yt3.ggpht.com/ytc/AIdro_k${YOUTUBE_CHANNEL_ID.substring(2, 20)}`;
 
     const entries = result.feed?.entry || [];
     const videos = Array.isArray(entries) ? entries : [entries];
@@ -32,6 +33,7 @@ export async function fetchYouTubeFeed() {
       channelAuthor,
       channelLink,
       channelId: YOUTUBE_CHANNEL_ID,
+      channelAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(channelAuthor)}&size=200&background=E8A6C1&color=fff&bold=true`,
       videos: videos.slice(0, 3).map(video => ({
         id: video['yt:videoId'],
         title: video.title,

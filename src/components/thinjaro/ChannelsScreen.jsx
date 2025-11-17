@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Calendar, Loader2, Youtube } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Play, Calendar, Loader2, Youtube, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { fetchYouTubeFeed } from '@/services/youtubeRssFeed';
 
 export default function ChannelsScreen() {
   const [channelData, setChannelData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedVideo, setSelectedVideo] = useState(null);
 
   const loadVideos = async () => {
     try {
@@ -78,7 +79,7 @@ export default function ChannelsScreen() {
               <div className="p-4 pb-3">
                 <div className="flex items-center gap-3 mb-3">
                   <img
-                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(channelData.channelAuthor)}&size=48&background=E8A6C1&color=fff&bold=true`}
+                    src={channelData.channelAvatar}
                     alt={channelData.channelAuthor}
                     className="w-12 h-12 rounded-full"
                     style={{
@@ -97,11 +98,9 @@ export default function ChannelsScreen() {
                 </div>
               </div>
 
-              <a
-                href={video.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block"
+              <button
+                onClick={() => setSelectedVideo(video)}
+                className="block w-full"
               >
                 <div className="relative aspect-video w-full overflow-hidden">
                   <img
@@ -119,7 +118,7 @@ export default function ChannelsScreen() {
                     </div>
                   </div>
                 </div>
-              </a>
+              </button>
 
               <div className="p-4 pt-3">
                 <h2 className="font-bold text-gray-800 line-clamp-2 text-base leading-snug">
@@ -130,6 +129,68 @@ export default function ChannelsScreen() {
           ))}
         </div>
       ) : null}
+
+      <AnimatePresence>
+        {selectedVideo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setSelectedVideo(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-4xl bg-white rounded-3xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+              }}
+            >
+              <button
+                onClick={() => setSelectedVideo(null)}
+                className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/70 backdrop-blur-sm text-white hover:bg-black/90 transition-all"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="aspect-video w-full bg-black">
+                <iframe
+                  src={`https://www.youtube.com/embed/${selectedVideo.id}?autoplay=1`}
+                  title={selectedVideo.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              </div>
+
+              <div className="p-5 bg-white">
+                <h3 className="font-bold text-gray-800 text-lg mb-3">
+                  {selectedVideo.title}
+                </h3>
+                <div className="flex items-center gap-3">
+                  <img
+                    src={channelData.channelAvatar}
+                    alt={channelData.channelAuthor}
+                    className="w-10 h-10 rounded-full"
+                  />
+                  <div>
+                    <p className="font-semibold text-gray-800 text-sm">
+                      {channelData.channelAuthor}
+                    </p>
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <Youtube size={12} className="text-red-500" />
+                      <span>{formatDate(selectedVideo.published)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

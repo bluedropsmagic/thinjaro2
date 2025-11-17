@@ -1,7 +1,8 @@
 import { XMLParser } from 'fast-xml-parser';
 
 const YOUTUBE_CHANNEL_ID = 'UCLZ9JXR0xk_cbJrHQcfY7ng';
-const RSS_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${YOUTUBE_CHANNEL_ID}`;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const RSS_PROXY_URL = `${SUPABASE_URL}/functions/v1/youtube-rss-proxy?channel_id=${YOUTUBE_CHANNEL_ID}`;
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -10,7 +11,7 @@ const parser = new XMLParser({
 
 export async function fetchYouTubeFeed() {
   try {
-    const response = await fetch(RSS_URL);
+    const response = await fetch(RSS_PROXY_URL);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch RSS feed: ${response.status}`);

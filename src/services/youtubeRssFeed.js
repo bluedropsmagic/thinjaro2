@@ -21,17 +21,28 @@ async function fetchChannelAvatar() {
       const now = Date.now();
 
       if ((now - timestamp) < CACHE_DURATION) {
+        console.log('Using cached avatar:', avatar);
         return avatar;
       }
     }
 
-    const response = await fetch(AVATAR_PROXY_URL);
+    console.log('Fetching fresh avatar from:', AVATAR_PROXY_URL);
+
+    const response = await fetch(AVATAR_PROXY_URL, {
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Avatar fetch failed:', response.status, errorText);
       throw new Error(`Failed to fetch avatar: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('Avatar response:', data);
 
     if (data.avatar) {
       localStorage.setItem(AVATAR_CACHE_KEY, JSON.stringify({
@@ -39,13 +50,16 @@ async function fetchChannelAvatar() {
         timestamp: Date.now()
       }));
 
+      console.log('Avatar cached successfully:', data.avatar);
       return data.avatar;
     }
 
     throw new Error('No avatar found in response');
   } catch (error) {
     console.error('Error fetching channel avatar:', error);
-    return `https://ui-avatars.com/api/?name=Channel&size=200&background=E8A6C1&color=fff&bold=true`;
+    const fallbackAvatar = `https://ui-avatars.com/api/?name=Channel&size=200&background=E8A6C1&color=fff&bold=true`;
+    console.log('Using fallback avatar:', fallbackAvatar);
+    return fallbackAvatar;
   }
 }
 

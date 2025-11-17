@@ -30,10 +30,17 @@ Deno.serve(async (req: Request) => {
     }
 
     const youtubeRssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-    
-    const response = await fetch(youtubeRssUrl);
-    
+
+    const response = await fetch(youtubeRssUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; RSS Reader/1.0)",
+        "Accept": "application/rss+xml, application/xml, text/xml, */*",
+      },
+    });
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("YouTube RSS error:", response.status, errorText);
       throw new Error(`YouTube RSS feed returned status ${response.status}`);
     }
 
@@ -48,11 +55,11 @@ Deno.serve(async (req: Request) => {
     });
   } catch (error) {
     console.error("Error fetching YouTube RSS:", error);
-    
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: "Failed to fetch YouTube RSS feed",
-        message: error.message 
+        message: error.message
       }),
       {
         status: 500,

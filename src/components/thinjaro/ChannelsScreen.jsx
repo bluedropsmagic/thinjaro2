@@ -79,8 +79,8 @@ export default function ChannelsScreen() {
               <div className="p-4 pb-3">
                 <div className="flex items-center gap-3 mb-3">
                   <img
-                    src={video.channelAvatar}
-                    alt={video.author}
+                    src={channelData.channelAvatar}
+                    alt={channelData.channelAuthor}
                     className="w-12 h-12 rounded-full"
                     style={{
                       boxShadow: '3px 3px 10px rgba(232, 166, 193, 0.3)',
@@ -88,7 +88,7 @@ export default function ChannelsScreen() {
                   />
                   <div className="flex-1">
                     <h3 className="font-bold text-gray-800 text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                      {video.author}
+                      {channelData.channelAuthor}
                     </h3>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500">
                       <Youtube size={12} className="text-red-500" />
@@ -172,13 +172,13 @@ export default function ChannelsScreen() {
                 </h3>
                 <div className="flex items-center gap-3">
                   <img
-                    src={selectedVideo.channelAvatar}
-                    alt={selectedVideo.author}
+                    src={channelData.channelAvatar}
+                    alt={channelData.channelAuthor}
                     className="w-10 h-10 rounded-full"
                   />
                   <div>
                     <p className="font-semibold text-gray-800 text-sm">
-                      {selectedVideo.author}
+                      {channelData.channelAuthor}
                     </p>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500">
                       <Youtube size={12} className="text-red-500" />

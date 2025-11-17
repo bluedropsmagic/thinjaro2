@@ -3,27 +3,69 @@ import { XMLParser } from 'fast-xml-parser';
 const YOUTUBE_CHANNEL_ID = 'UCZUUZFex6AaIU4QTopFudYA';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const RSS_PROXY_URL = `${SUPABASE_URL}/functions/v1/youtube-rss-proxy?channel_id=${YOUTUBE_CHANNEL_ID}`;
+const AVATAR_PROXY_URL = `${SUPABASE_URL}/functions/v1/youtube-avatar-proxy?channel_id=${YOUTUBE_CHANNEL_ID}`;
+const AVATAR_CACHE_KEY = 'youtube_channel_avatar';
+const CACHE_DURATION = 60 * 60 * 1000;
 
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_'
 });
 
-export async function fetchYouTubeFeed() {
+async function fetchChannelAvatar() {
   try {
-    const response = await fetch(RSS_PROXY_URL);
+    const cached = localStorage.getItem(AVATAR_CACHE_KEY);
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch RSS feed: ${response.status}`);
+    if (cached) {
+      const { avatar, timestamp } = JSON.parse(cached);
+      const now = Date.now();
+
+      if ((now - timestamp) < CACHE_DURATION) {
+        return avatar;
+      }
     }
 
-    const xmlText = await response.text();
+    const response = await fetch(AVATAR_PROXY_URL);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch avatar: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.avatar) {
+      localStorage.setItem(AVATAR_CACHE_KEY, JSON.stringify({
+        avatar: data.avatar,
+        timestamp: Date.now()
+      }));
+
+      return data.avatar;
+    }
+
+    throw new Error('No avatar found in response');
+  } catch (error) {
+    console.error('Error fetching channel avatar:', error);
+    return `https://ui-avatars.com/api/?name=Channel&size=200&background=E8A6C1&color=fff&bold=true`;
+  }
+}
+
+export async function fetchYouTubeFeed() {
+  try {
+    const [rssResponse, channelAvatar] = await Promise.all([
+      fetch(RSS_PROXY_URL),
+      fetchChannelAvatar()
+    ]);
+
+    if (!rssResponse.ok) {
+      throw new Error(`Failed to fetch RSS feed: ${rssResponse.status}`);
+    }
+
+    const xmlText = await rssResponse.text();
     const result = parser.parse(xmlText);
 
     const channelTitle = result.feed?.title || '';
     const channelAuthor = result.feed?.author?.name || '';
     const channelLink = result.feed?.author?.uri || '';
-    const channelAvatar = `https://yt3.ggpht.com/ytc/AIdro_k${YOUTUBE_CHANNEL_ID.substring(2, 20)}`;
 
     const entries = result.feed?.entry || [];
     const videos = Array.isArray(entries) ? entries : [entries];
@@ -33,7 +75,7 @@ export async function fetchYouTubeFeed() {
       channelAuthor,
       channelLink,
       channelId: YOUTUBE_CHANNEL_ID,
-      channelAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(channelAuthor)}&size=200&background=E8A6C1&color=fff&bold=true`,
+      channelAvatar,
       videos: videos.slice(0, 3).map(video => ({
         id: video['yt:videoId'],
         title: video.title,

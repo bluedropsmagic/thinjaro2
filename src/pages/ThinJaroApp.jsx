@@ -12,20 +12,30 @@ import { base44 } from '@/api/base44Client';
 
 export default function ThinJaroApp() {
   const [currentScreen, setCurrentScreen] = useState('home');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    const saved = localStorage.getItem('thinjaroLoggedIn');
+    return saved === 'true';
+  });
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('thinjaroUser');
+    return saved ? JSON.parse(saved) : null;
+  });
   const contentRef = useRef(null);
 
   const handleLogin = (userData) => {
     setUser(userData);
     setIsLoggedIn(true);
     setCurrentScreen('home');
+    localStorage.setItem('thinjaroLoggedIn', 'true');
+    localStorage.setItem('thinjaroUser', JSON.stringify(userData));
   };
 
   const handleLogout = async () => {
     await base44.auth.logout();
     setIsLoggedIn(false);
     setUser(null);
+    localStorage.removeItem('thinjaroLoggedIn');
+    localStorage.removeItem('thinjaroUser');
   };
 
   const handleNavigate = (screen) => {

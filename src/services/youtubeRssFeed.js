@@ -1,6 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 
-const YOUTUBE_CHANNEL_ID = 'UCLZ9JXR0xk_cbJrHQcfY7ng';
+const YOUTUBE_CHANNEL_ID = 'UCZUUZFex6AaIU4QTopFudYA';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const RSS_PROXY_URL = `${SUPABASE_URL}/functions/v1/youtube-rss-proxy?channel_id=${YOUTUBE_CHANNEL_ID}`;
 

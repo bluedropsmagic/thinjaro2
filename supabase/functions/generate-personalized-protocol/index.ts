@@ -24,12 +24,17 @@ Deno.serve(async (req: Request) => {
 
     const systemPrompt = `
 Você é um assistente especializado em saúde, nutrição, produtividade e mudança de hábitos.
-Sua tarefa é gerar um protocolo personalizado de 30 dias no formato JSON.
+Sua tarefa é gerar um protocolo personalizado de EXATAMENTE 30 dias no formato JSON.
 
-REGRAS IMPORTANTES:
+REGRAS CRÍTICAS:
 - A saída deve ser SOMENTE JSON válido.
 - Não escreva explicações ou texto fora do JSON.
-- Gere o JSON seguindo exatamente esta estrutura:
+- OBRIGATÓRIO: Gere EXATAMENTE 30 dias no array "protocol_30_days".
+- Cada dia DEVE ter EXATAMENTE 5 objetivos (hydration, exercise, nutrition, sleep, mindfulness).
+- Os objetivos devem progredir gradualmente ao longo dos 30 dias.
+- Seja específico e prático nas descrições.
+
+ESTRUTURA EXATA DO JSON:
 
 {
   "overall_completion": 0,
@@ -38,36 +43,36 @@ REGRAS IMPORTANTES:
     {
       "id": "hydration",
       "type": "hydration",
-      "title": "string",
-      "description": "string",
+      "title": "Hidratação Matinal",
+      "description": "2 copos de água ao acordar",
       "completed": false
     },
     {
       "id": "exercise",
       "type": "exercise",
-      "title": "string",
-      "description": "string",
+      "title": "Exercício Diário",
+      "description": "15-20 minutos de treino",
       "completed": false
     },
     {
       "id": "nutrition",
       "type": "nutrition",
-      "title": "string",
-      "description": "string",
+      "title": "Alimentação Saudável",
+      "description": "3 refeições balançeadas",
       "completed": false
     },
     {
       "id": "sleep",
       "type": "sleep",
-      "title": "string",
-      "description": "string",
+      "title": "Sono de Qualidade",
+      "description": "7-8 horas de sono",
       "completed": false
     },
     {
       "id": "mindfulness",
       "type": "mindfulness",
-      "title": "string",
-      "description": "string",
+      "title": "Mindfulness",
+      "description": "5 minutos de meditação",
       "completed": false
     }
   ],
@@ -75,21 +80,18 @@ REGRAS IMPORTANTES:
     {
       "day": 1,
       "objectives": [
-        {
-          "type": "hydration",
-          "title": "string",
-          "description": "string",
-          "completed": false
-        }
+        {"type": "hydration", "title": "...", "description": "...", "completed": false},
+        {"type": "exercise", "title": "...", "description": "...", "completed": false},
+        {"type": "nutrition", "title": "...", "description": "...", "completed": false},
+        {"type": "sleep", "title": "...", "description": "...", "completed": false},
+        {"type": "mindfulness", "title": "...", "description": "...", "completed": false}
       ]
-    }
+    },
+    ... (repita até o dia 30)
   ]
 }
 
-Gere um protocolo personalizado baseado nas respostas do usuário.
-Cada dia deve ter 5 objetivos: hydration, exercise, nutrition, sleep, mindfulness.
-Os objetivos devem progredir gradualmente ao longo dos 30 dias.
-Seja específico e prático nas descrições.
+IMPORTANTE: O array "protocol_30_days" DEVE conter TODOS os 30 dias, do dia 1 ao dia 30.
 `;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -122,6 +124,8 @@ Seja específico e prático nas descrições.
     const data = await response.json();
     const content = data.choices[0].message.content;
 
+    console.log("OpenAI Response length:", content.length);
+
     let parsedContent;
     try {
       parsedContent = JSON.parse(content);
@@ -130,9 +134,17 @@ Seja específico e prático nas descrições.
       if (jsonMatch) {
         parsedContent = JSON.parse(jsonMatch[0]);
       } else {
+        console.error("Failed to parse response:", content);
         throw new Error("Failed to parse OpenAI response as JSON");
       }
     }
+
+    if (!parsedContent.protocol_30_days || parsedContent.protocol_30_days.length !== 30) {
+      console.error("Invalid protocol length:", parsedContent.protocol_30_days?.length);
+      throw new Error(`Protocol must have exactly 30 days, but got ${parsedContent.protocol_30_days?.length || 0}`);
+    }
+
+    console.log("Protocol generated successfully with", parsedContent.protocol_30_days.length, "days");
 
     return new Response(JSON.stringify(parsedContent), {
       headers: {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Trophy, TrendingUp, X, CheckCircle2, Circle, Droplets, Dumbbell, Apple, Moon, Heart } from 'lucide-react';
+import { Trophy, TrendingUp, X, CheckCircle2, Circle, Droplets, Dumbbell, Apple, Moon, Heart, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import QuestionnaireModal from './QuestionnaireModal';
 
 const DayDetail = ({ day, onClose, onToggleObjective }) => {
   const objectiveIcons = {
@@ -91,6 +92,9 @@ const DayDetail = ({ day, onClose, onToggleObjective }) => {
 
 export default function ProtocolScreen() {
   const [selectedDay, setSelectedDay] = useState(null);
+  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
+  const [isGeneratingProtocol, setIsGeneratingProtocol] = useState(false);
+  const [hasCustomProtocol, setHasCustomProtocol] = useState(false);
   const [protocolDays, setProtocolDays] = useState(() => {
     const days = [];
     const today = new Date();
@@ -155,6 +159,52 @@ export default function ProtocolScreen() {
     );
   };
 
+  const handleGenerateProtocol = async (answers) => {
+    setIsGeneratingProtocol(true);
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-personalized-protocol`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify(answers),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate protocol');
+      }
+
+      const protocolData = await response.json();
+
+      if (protocolData.protocol_30_days && protocolData.protocol_30_days.length > 0) {
+        const today = new Date();
+        const newProtocolDays = protocolData.protocol_30_days.map((dayData, index) => {
+          const date = new Date(today);
+          date.setDate(today.getDate() - (30 - (index + 1)));
+          return {
+            number: dayData.day,
+            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            objectives: dayData.objectives.map((obj) => ({
+              ...obj,
+              completed: false,
+            })),
+          };
+        });
+        setProtocolDays(newProtocolDays);
+        setHasCustomProtocol(true);
+      }
+
+      setShowQuestionnaire(false);
+    } catch (error) {
+      console.error('Error generating protocol:', error);
+      alert('Erro ao gerar protocolo. Por favor, tente novamente.');
+    } finally {
+      setIsGeneratingProtocol(false);
+    }
+  };
+
   const objectiveIcons = {
     hydration: Droplets,
     exercise: Dumbbell,
@@ -200,6 +250,45 @@ export default function ProtocolScreen() {
 
   return (
     <div className="min-h-screen bg-[#FFF9FC] p-6 pb-24">
+      {/* Generate Custom Protocol Button */}
+      <motion.button
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        onClick={() => setShowQuestionnaire(true)}
+        className="w-full rounded-3xl p-4 mb-6 flex items-center justify-between"
+        style={{
+          background: hasCustomProtocol
+            ? 'linear-gradient(135deg, #C9A6E8 0%, #E8A6C1 100%)'
+            : 'linear-gradient(135deg, #E8A6C1 0%, #C9A6E8 100%)',
+          boxShadow: '8px 8px 24px rgba(232, 166, 193, 0.3), -8px -8px 24px rgba(255, 255, 255, 0.8)',
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center"
+            style={{
+              background: 'rgba(255, 255, 255, 0.3)',
+              boxShadow: 'inset 2px 2px 6px rgba(232, 166, 193, 0.3), inset -2px -2px 6px rgba(255, 255, 255, 0.5)',
+            }}
+          >
+            <Sparkles size={24} className="text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">
+              {hasCustomProtocol ? 'Gerar Novo Protocolo' : 'Gerar Protocolo Personalizado'}
+            </h3>
+            <p className="text-sm text-white/90">
+              {hasCustomProtocol ? 'Criar outro protocolo com IA' : 'Criado especialmente para você com IA'}
+            </p>
+          </div>
+        </div>
+        <div className="text-white">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </motion.button>
+
       {/* Overall Progress */}
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
@@ -426,6 +515,13 @@ export default function ProtocolScreen() {
           />
         )}
       </AnimatePresence>
+
+      {/* Questionnaire Modal */}
+      <QuestionnaireModal
+        isOpen={showQuestionnaire}
+        onClose={() => setShowQuestionnaire(false)}
+        onSubmit={handleGenerateProtocol}
+      />
     </div>
   );
 }

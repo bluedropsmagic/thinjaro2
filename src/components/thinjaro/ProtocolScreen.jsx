@@ -172,11 +172,13 @@ export default function ProtocolScreen() {
         body: JSON.stringify(answers),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate protocol');
-      }
-
       const protocolData = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = protocolData.error || 'Failed to generate protocol';
+        console.error('API Error:', errorMsg);
+        throw new Error(errorMsg);
+      }
 
       if (protocolData.protocol_30_days && protocolData.protocol_30_days.length > 0) {
         const today = new Date();
@@ -199,7 +201,7 @@ export default function ProtocolScreen() {
       setShowQuestionnaire(false);
     } catch (error) {
       console.error('Error generating protocol:', error);
-      alert('Erro ao gerar protocolo. Por favor, tente novamente.');
+      alert(`Erro ao gerar protocolo: ${error.message}\n\nPor favor, tente novamente.`);
     } finally {
       setIsGeneratingProtocol(false);
     }

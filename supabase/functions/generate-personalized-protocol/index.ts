@@ -6,6 +6,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+const mockObjectives = {
+  hydration: { title: "Hidratação", description: "Beba 2 litros de água hoje" },
+  exercise: { title: "Exercício", description: "15 minutos de atividade física" },
+  nutrition: { title: "Alimentação", description: "3 refeições balanceadas" },
+  sleep: { title: "Sono", description: "Durma 7-8 horas" },
+  mindfulness: { title: "Mindfulness", description: "5 minutos de meditação" }
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -22,77 +30,15 @@ Deno.serve(async (req: Request) => {
       throw new Error("OPENAI_API_KEY not configured");
     }
 
-    const systemPrompt = `
-Você é um assistente especializado em saúde, nutrição, produtividade e mudança de hábitos.
-Sua tarefa é gerar um protocolo personalizado de EXATAMENTE 30 dias no formato JSON.
-
-REGRAS CRÍTICAS:
-- A saída deve ser SOMENTE JSON válido.
-- Não escreva explicações ou texto fora do JSON.
-- OBRIGATÓRIO: Gere EXATAMENTE 30 dias no array "protocol_30_days".
-- Cada dia DEVE ter EXATAMENTE 5 objetivos (hydration, exercise, nutrition, sleep, mindfulness).
-- Os objetivos devem progredir gradualmente ao longo dos 30 dias.
-- Seja específico e prático nas descrições.
-
-ESTRUTURA EXATA DO JSON:
-
+    const systemPrompt = `Gere objetivos personalizados APENAS para os 3 primeiros dias.
+Retorne SOMENTE JSON válido:
 {
-  "overall_completion": 0,
-  "day_streak": 0,
-  "todays_journey": [
-    {
-      "id": "hydration",
-      "type": "hydration",
-      "title": "Hidratação Matinal",
-      "description": "2 copos de água ao acordar",
-      "completed": false
-    },
-    {
-      "id": "exercise",
-      "type": "exercise",
-      "title": "Exercício Diário",
-      "description": "15-20 minutos de treino",
-      "completed": false
-    },
-    {
-      "id": "nutrition",
-      "type": "nutrition",
-      "title": "Alimentação Saudável",
-      "description": "3 refeições balançeadas",
-      "completed": false
-    },
-    {
-      "id": "sleep",
-      "type": "sleep",
-      "title": "Sono de Qualidade",
-      "description": "7-8 horas de sono",
-      "completed": false
-    },
-    {
-      "id": "mindfulness",
-      "type": "mindfulness",
-      "title": "Mindfulness",
-      "description": "5 minutos de meditação",
-      "completed": false
-    }
-  ],
-  "protocol_30_days": [
-    {
-      "day": 1,
-      "objectives": [
-        {"type": "hydration", "title": "...", "description": "...", "completed": false},
-        {"type": "exercise", "title": "...", "description": "...", "completed": false},
-        {"type": "nutrition", "title": "...", "description": "...", "completed": false},
-        {"type": "sleep", "title": "...", "description": "...", "completed": false},
-        {"type": "mindfulness", "title": "...", "description": "...", "completed": false}
-      ]
-    },
-    ... (repita até o dia 30)
+  "days": [
+    {"day": 1, "objectives": {"hydration": {"title": "...", "description": "..."}, "exercise": {...}, "nutrition": {...}, "sleep": {...}, "mindfulness": {...}}},
+    {"day": 2, "objectives": {...}},
+    {"day": 3, "objectives": {...}}
   ]
-}
-
-IMPORTANTE: O array "protocol_30_days" DEVE conter TODOS os 30 dias, do dia 1 ao dia 30.
-`;
+}`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -103,17 +49,11 @@ IMPORTANTE: O array "protocol_30_days" DEVE conter TODOS os 30 dias, do dia 1 ao
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-          {
-            role: "user",
-            content: `Usuário: ${JSON.stringify(userData)}\n\nGere AGORA o protocolo JSON completo com EXATAMENTE 30 dias.`,
-          },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Perfil: ${JSON.stringify(userData)}` }
         ],
-        temperature: 0.5,
-        max_tokens: 16000,
+        temperature: 0.3,
+        max_tokens: 1000,
       }),
     });
 
@@ -125,29 +65,60 @@ IMPORTANTE: O array "protocol_30_days" DEVE conter TODOS os 30 dias, do dia 1 ao
     const data = await response.json();
     const content = data.choices[0].message.content;
 
-    console.log("OpenAI Response length:", content.length);
-
-    let parsedContent;
+    let aiDays;
     try {
-      parsedContent = JSON.parse(content);
+      const parsed = JSON.parse(content);
+      aiDays = parsed.days;
     } catch (e) {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        parsedContent = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        aiDays = parsed.days;
       } else {
-        console.error("Failed to parse response:", content);
-        throw new Error("Failed to parse OpenAI response as JSON");
+        throw new Error("Failed to parse AI response");
       }
     }
 
-    if (!parsedContent.protocol_30_days || parsedContent.protocol_30_days.length !== 30) {
-      console.error("Invalid protocol length:", parsedContent.protocol_30_days?.length);
-      throw new Error(`Protocol must have exactly 30 days, but got ${parsedContent.protocol_30_days?.length || 0}`);
+    const protocol_30_days = [];
+
+    for (let day = 1; day <= 30; day++) {
+      const dayObjectives = [];
+
+      if (day <= 3 && aiDays && aiDays[day - 1]) {
+        const aiDay = aiDays[day - 1];
+        for (const [type, obj] of Object.entries(aiDay.objectives)) {
+          dayObjectives.push({
+            type,
+            title: obj.title,
+            description: obj.description,
+            completed: false
+          });
+        }
+      } else {
+        for (const [type, obj] of Object.entries(mockObjectives)) {
+          dayObjectives.push({
+            type,
+            title: obj.title,
+            description: obj.description,
+            completed: false
+          });
+        }
+      }
+
+      protocol_30_days.push({
+        day,
+        objectives: dayObjectives
+      });
     }
 
-    console.log("Protocol generated successfully with", parsedContent.protocol_30_days.length, "days");
+    const fullProtocol = {
+      overall_completion: 0,
+      day_streak: 0,
+      todays_journey: protocol_30_days[0].objectives,
+      protocol_30_days
+    };
 
-    return new Response(JSON.stringify(parsedContent), {
+    return new Response(JSON.stringify(fullProtocol), {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json",

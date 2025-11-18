@@ -81,6 +81,30 @@ export default function ThinJaroApp() {
     try {
       await protocolService.generateProtocol(user.id, answers);
       setCurrentScreen('home');
+
+      setTimeout(async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-remaining-days`;
+
+          await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
+              userId: user.id,
+              userData: answers
+            }),
+          });
+
+          console.log('Background generation completed');
+        } catch (bgError) {
+          console.error('Background generation error:', bgError);
+        }
+      }, 2000);
+
     } catch (error) {
       console.error('Error generating protocol:', error);
       alert(`Erro ao gerar protocolo: ${error.message}`);

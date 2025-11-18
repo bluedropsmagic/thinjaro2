@@ -8,34 +8,93 @@ import ChannelsScreen from '../components/thinjaro/ChannelsScreen';
 import ProtocolScreen from '../components/thinjaro/ProtocolScreen';
 import JournalScreen from '../components/thinjaro/JournalScreen';
 import SettingsScreen from '../components/thinjaro/SettingsScreen';
-import { base44 } from '@/api/base44Client';
+import QuestionnaireModal from '../components/thinjaro/QuestionnaireModal';
+import ProtocolLoadingScreen from '../components/thinjaro/ProtocolLoadingScreen';
+import { supabase } from '../lib/supabase';
+import { protocolService } from '../services/protocolService';
 
 export default function ThinJaroApp() {
   const [currentScreen, setCurrentScreen] = useState('home');
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    const saved = localStorage.getItem('thinjaroLoggedIn');
-    return saved === 'true';
-  });
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('thinjaroUser');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+  const [showOnboardingQuiz, setShowOnboardingQuiz] = useState(false);
+  const [isGeneratingProtocol, setIsGeneratingProtocol] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const contentRef = useRef(null);
 
-  const handleLogin = (userData) => {
-    setUser(userData);
+  useEffect(() => {
+    checkAuthStatus();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          setUser(session.user);
+          setIsLoggedIn(true);
+        } else {
+          setUser(null);
+          setIsLoggedIn(false);
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user);
+        setIsLoggedIn(true);
+      }
+    } catch (error) {
+      console.error('Error checking auth status:', error);
+    } finally {
+      setIsCheckingAuth(false);
+    }
+  };
+
+  const handleLogin = async (supabaseUser) => {
+    setUser(supabaseUser);
     setIsLoggedIn(true);
     setCurrentScreen('home');
-    localStorage.setItem('thinjaroLoggedIn', 'true');
-    localStorage.setItem('thinjaroUser', JSON.stringify(userData));
+  };
+
+  const handleSignupComplete = async (supabaseUser) => {
+    setUser(supabaseUser);
+    setIsLoggedIn(true);
+
+    const protocol = await protocolService.getUserProtocol(supabaseUser.id);
+    if (!protocol) {
+      setShowOnboardingQuiz(true);
+    } else {
+      setCurrentScreen('home');
+    }
+  };
+
+  const handleQuizSubmit = async (answers) => {
+    setShowOnboardingQuiz(false);
+    setIsGeneratingProtocol(true);
+
+    try {
+      await protocolService.generateProtocol(user.id, answers);
+      setCurrentScreen('home');
+    } catch (error) {
+      console.error('Error generating protocol:', error);
+      alert(`Erro ao gerar protocolo: ${error.message}`);
+      setShowOnboardingQuiz(true);
+    } finally {
+      setIsGeneratingProtocol(false);
+    }
   };
 
   const handleLogout = async () => {
-    await base44.auth.logout();
+    await supabase.auth.signOut();
     setIsLoggedIn(false);
     setUser(null);
-    localStorage.removeItem('thinjaroLoggedIn');
-    localStorage.removeItem('thinjaroUser');
+    setCurrentScreen('home');
   };
 
   const handleNavigate = (screen) => {
@@ -75,9 +134,40 @@ export default function ThinJaroApp() {
     }
   };
 
-  // Not logged in
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#FFF9FC] via-[#F5D4E4] to-[#E8A6C1] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[#F5D4E4] border-t-[#E8A6C1] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (!isLoggedIn) {
-    return <LoginScreen onLogin={handleLogin} />;
+    return (
+      <LoginScreen
+        onLogin={handleLogin}
+        onSignupComplete={handleSignupComplete}
+      />
+    );
+  }
+
+  if (isGeneratingProtocol) {
+    return <ProtocolLoadingScreen />;
+  }
+
+  if (showOnboardingQuiz) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#FFF9FC] via-[#F5D4E4] to-[#E8A6C1] flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <QuestionnaireModal
+            isOpen={true}
+            onClose={() => setShowOnboardingQuiz(false)}
+            onSubmit={handleQuizSubmit}
+            isGenerating={false}
+          />
+        </div>
+      </div>
+    );
   }
 
   // Logged in - show app

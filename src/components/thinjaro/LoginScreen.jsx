@@ -2,27 +2,57 @@ import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, UserPlus, LogIn } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ThinJaroLogo from './ThinJaroLogo';
+import { supabase } from '../../lib/supabase';
 
-export default function LoginScreen({ onLogin }) {
+export default function LoginScreen({ onLogin, onSignupComplete }) {
   const [mode, setMode] = useState('initial'); // 'initial', 'login', 'signup'
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    setTimeout(() => {
-      const userData = {
-        full_name: mode === 'signup' ? fullName : email.split('@')[0],
-        email: email,
-      };
-      onLogin(userData);
+    setError('');
+
+    try {
+      if (mode === 'signup') {
+        const { data, error: signupError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+            }
+          }
+        });
+
+        if (signupError) throw signupError;
+
+        if (data.user) {
+          onSignupComplete(data.user);
+        }
+      } else {
+        const { data, error: loginError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (loginError) throw loginError;
+
+        if (data.user) {
+          onLogin(data.user);
+        }
+      }
+    } catch (err) {
+      console.error('Auth error:', err);
+      setError(err.message || 'An error occurred');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleModeChange = (newMode) => {
@@ -211,6 +241,16 @@ export default function LoginScreen({ onLogin }) {
                   mode === 'signup' ? 'Create Account' : 'Sign In'
                 )}
               </button>
+
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-4 p-3 rounded-2xl bg-red-50 border border-red-200"
+                >
+                  <p className="text-sm text-red-600 text-center">{error}</p>
+                </motion.div>
+              )}
             </motion.form>
           )}
         </AnimatePresence>

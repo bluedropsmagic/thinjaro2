@@ -1,10 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, Star, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ExerciseDetail from './ExerciseDetail';
+import { supabase } from '../../lib/supabase';
+import { protocolService } from '../../services/protocolService';
 
 export default function ExercisesScreen() {
   const [selectedExercise, setSelectedExercise] = useState(null);
+  const [protocolExercises, setProtocolExercises] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadProtocolExercises();
+  }, []);
+
+  const loadProtocolExercises = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const protocol = await protocolService.getUserProtocol(user.id);
+      if (!protocol) return;
+
+      const objectives = await protocolService.getUserObjectives(user);
+      const exerciseObjectives = objectives.filter(obj => obj.objective_type === 'exercise');
+
+      const uniqueExercises = [];
+      const seen = new Set();
+
+      exerciseObjectives.forEach((obj, index) => {
+        if (!seen.has(obj.title)) {
+          seen.add(obj.title);
+          uniqueExercises.push({
+            id: obj.id,
+            title: obj.title,
+            duration: '15-20 min',
+            difficulty: obj.day_number <= 10 ? 'Beginner' : obj.day_number <= 20 ? 'Intermediate' : 'Advanced',
+            image: `https://images.unsplash.com/photo-${1518611012118 + index}?w=400&h=300&fit=crop`,
+            color: ['#E8A6C1', '#A6E8C1', '#C9A6E8', '#F5D4E4'][index % 4],
+            steps: obj.description.split('.').filter(s => s.trim()).map(s => s.trim()),
+            dayNumber: obj.day_number,
+          });
+        }
+      });
+
+      setProtocolExercises(uniqueExercises);
+    } catch (error) {
+      console.error('Error loading protocol exercises:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const exercises = [
     {
@@ -109,11 +155,29 @@ export default function ExercisesScreen() {
     return <ExerciseDetail exercise={selectedExercise} onBack={() => setSelectedExercise(null)} />;
   }
 
+  const displayExercises = protocolExercises.length > 0 ? protocolExercises : exercises;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#FFF9FC] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[#F5D4E4] border-t-[#E8A6C1] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#FFF9FC] p-4 pb-24">
+      {protocolExercises.length > 0 && (
+        <div className="mb-4 p-3 rounded-2xl bg-[#E8A6C120] border border-[#E8A6C1]">
+          <p className="text-sm text-gray-700 text-center">
+            Exercícios do seu protocolo personalizado
+          </p>
+        </div>
+      )}
+
       {/* Exercise Grid */}
       <div className="grid gap-4">
-        {exercises.map((exercise, index) => (
+        {displayExercises.map((exercise, index) => (
           <motion.button
             key={exercise.id}
             initial={{ y: 20, opacity: 0 }}

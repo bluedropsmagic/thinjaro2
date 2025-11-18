@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trophy, TrendingUp, X, CheckCircle2, Circle, Droplets, Dumbbell, Apple, Moon, Heart, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QuestionnaireModal from './QuestionnaireModal';
+import { supabase } from '../../lib/supabase';
+import { protocolService } from '../../services/protocolService';
 
 const DayDetail = ({ day, onClose, onToggleObjective }) => {
   const objectiveIcons = {
@@ -95,6 +97,9 @@ export default function ProtocolScreen() {
   const [showQuestionnaire, setShowQuestionnaire] = useState(false);
   const [isGeneratingProtocol, setIsGeneratingProtocol] = useState(false);
   const [hasCustomProtocol, setHasCustomProtocol] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [protocolData, setProtocolData] = useState(null);
   const [protocolDays, setProtocolDays] = useState(() => {
     const days = [];
     const today = new Date();
@@ -144,64 +149,132 @@ export default function ProtocolScreen() {
     return days;
   });
 
-  const toggleObjective = (dayNumber, objectiveIndex) => {
+  useEffect(() => {
+    loadUserProtocol();
+  }, []);
+
+  const loadUserProtocol = async () => {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) return;
+
+      setUser(currentUser);
+
+      const protocol = await protocolService.getUserProtocol(currentUser.id);
+      if (protocol) {
+        setProtocolData(protocol);
+        setHasCustomProtocol(true);
+        await loadProtocolDays(currentUser.id);
+      }
+    } catch (error) {
+      console.error('Error loading protocol:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadProtocolDays = async (userId) => {
+    try {
+      const objectives = await protocolService.getUserObjectives(userId);
+
+      const dayGroups = objectives.reduce((acc, obj) => {
+        if (!acc[obj.day_number]) {
+          acc[obj.day_number] = [];
+        }
+        acc[obj.day_number].push(obj);
+        return acc;
+      }, {});
+
+      const today = new Date();
+      const days = Object.keys(dayGroups).map(dayNum => {
+        const dayNumber = parseInt(dayNum);
+        const date = new Date(today);
+        date.setDate(today.getDate() - (30 - dayNumber));
+
+        return {
+          number: dayNumber,
+          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          objectives: dayGroups[dayNum].map(obj => ({
+            id: obj.id,
+            type: obj.objective_type,
+            title: obj.title,
+            description: obj.description,
+            completed: obj.completed,
+          })),
+        };
+      });
+
+      days.sort((a, b) => a.number - b.number);
+      setProtocolDays(days);
+    } catch (error) {
+      console.error('Error loading protocol days:', error);
+    }
+  };
+
+  const toggleObjective = async (dayNumber, objectiveIndex) => {
+    const day = protocolDays.find(d => d.number === dayNumber);
+    if (!day) return;
+
+    const objective = day.objectives[objectiveIndex];
+    const newCompletedState = !objective.completed;
+
     setProtocolDays(prevDays =>
-      prevDays.map(day =>
-        day.number === dayNumber
+      prevDays.map(d =>
+        d.number === dayNumber
           ? {
-              ...day,
-              objectives: day.objectives.map((obj, idx) =>
-                idx === objectiveIndex ? { ...obj, completed: !obj.completed } : obj
+              ...d,
+              objectives: d.objectives.map((obj, idx) =>
+                idx === objectiveIndex ? { ...obj, completed: newCompletedState } : obj
               ),
             }
-          : day
+          : d
       )
     );
+
+    try {
+      if (objective.id) {
+        await protocolService.updateObjectiveCompletion(objective.id, newCompletedState);
+      }
+    } catch (error) {
+      console.error('Error updating objective:', error);
+      setProtocolDays(prevDays =>
+        prevDays.map(d =>
+          d.number === dayNumber
+            ? {
+                ...d,
+                objectives: d.objectives.map((obj, idx) =>
+                  idx === objectiveIndex ? { ...obj, completed: !newCompletedState } : obj
+                ),
+              }
+            : d
+        )
+      );
+    }
   };
 
   const handleGenerateProtocol = async (answers) => {
-    setIsGeneratingProtocol(true);
-    try {
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-personalized-protocol`;
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify(answers),
-      });
+    if (!user) {
+      alert('Você precisa estar logado para gerar um protocolo.');
+      return;
+    }
 
-      const protocolData = await response.json();
-
-      if (!response.ok) {
-        const errorMsg = protocolData.error || 'Failed to generate protocol';
-        console.error('API Error:', errorMsg);
-        throw new Error(errorMsg);
-      }
-
-      if (protocolData.protocol_30_days && protocolData.protocol_30_days.length > 0) {
-        const today = new Date();
-        const newProtocolDays = protocolData.protocol_30_days.map((dayData, index) => {
-          const date = new Date(today);
-          date.setDate(today.getDate() - (30 - (index + 1)));
-          return {
-            number: dayData.day,
-            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            objectives: dayData.objectives.map((obj) => ({
-              ...obj,
-              completed: false,
-            })),
-          };
-        });
-        setProtocolDays(newProtocolDays);
-        setHasCustomProtocol(true);
-      }
-
+    const regenerationCheck = await protocolService.canRegenerateProtocol(user.id);
+    if (!regenerationCheck.canRegenerate) {
+      alert(`Você só pode regenerar seu protocolo após 30 dias.\nDias restantes: ${regenerationCheck.daysRemaining}`);
       setShowQuestionnaire(false);
+      return;
+    }
+
+    setIsGeneratingProtocol(true);
+    setShowQuestionnaire(false);
+
+    try {
+      await protocolService.generateProtocol(user.id, answers);
+      await loadUserProtocol();
     } catch (error) {
       console.error('Error generating protocol:', error);
       alert(`Erro ao gerar protocolo: ${error.message}\n\nPor favor, tente novamente.`);
+      setShowQuestionnaire(true);
     } finally {
       setIsGeneratingProtocol(false);
     }

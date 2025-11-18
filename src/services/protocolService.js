@@ -40,23 +40,24 @@ export const protocolService = {
   },
 
   async generateProtocol(userId, quizAnswers) {
+    const { data: { session } } = await supabase.auth.getSession();
     const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-personalized-protocol`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify(quizAnswers),
     });
 
-    const protocolData = await response.json();
-
     if (!response.ok) {
-      const errorMsg = protocolData.error || 'Failed to generate protocol';
-      throw new Error(errorMsg);
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to generate protocol');
     }
+
+    const protocolData = await response.json();
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);

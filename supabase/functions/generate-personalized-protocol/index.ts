@@ -101,7 +101,7 @@ IMPORTANTE: O array "protocol_30_days" DEVE conter TODOS os 30 dias, do dia 1 ao
         "Authorization": `Bearer ${openaiApiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -109,10 +109,10 @@ IMPORTANTE: O array "protocol_30_days" DEVE conter TODOS os 30 dias, do dia 1 ao
           },
           {
             role: "user",
-            content: `Aqui estão as respostas do usuário:\n\n${JSON.stringify(userData, null, 2)}\n\nGere o protocolo personalizado completo com todos os 30 dias agora.`,
+            content: `Usuário: ${JSON.stringify(userData)}\n\nGere AGORA o protocolo JSON completo com EXATAMENTE 30 dias.`,
           },
         ],
-        temperature: 0.7,
+        temperature: 0.5,
         max_tokens: 16000,
       }),
     });

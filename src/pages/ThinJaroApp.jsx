@@ -8,7 +8,7 @@ import ChannelsScreen from '../components/thinjaro/ChannelsScreen';
 import ProtocolScreen from '../components/thinjaro/ProtocolScreen';
 import JournalScreen from '../components/thinjaro/JournalScreen';
 import SettingsScreen from '../components/thinjaro/SettingsScreen';
-import QuestionnaireModal from '../components/thinjaro/QuestionnaireModal';
+import OnboardingScreen from '../components/thinjaro/OnboardingScreen';
 import ProtocolLoadingScreen from '../components/thinjaro/ProtocolLoadingScreen';
 import { supabase } from '../lib/supabase';
 import { protocolService } from '../services/protocolService';
@@ -157,16 +157,10 @@ export default function ThinJaroApp() {
 
   if (showOnboardingQuiz) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#FFF9FC] via-[#F5D4E4] to-[#E8A6C1] flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <QuestionnaireModal
-            isOpen={true}
-            onClose={() => setShowOnboardingQuiz(false)}
-            onSubmit={handleQuizSubmit}
-            isGenerating={false}
-          />
-        </div>
-      </div>
+      <OnboardingScreen
+        onComplete={handleQuizSubmit}
+        isGenerating={isGeneratingProtocol}
+      />
     );
   }
 

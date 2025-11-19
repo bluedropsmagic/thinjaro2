@@ -283,8 +283,15 @@ export default function ProtocolScreen() {
     }
   }
 
-  // Get today's objectives (last day)
-  const todayObjectives = protocolDays[protocolDays.length - 1]?.objectives || [];
+  // Calculate current day based on protocol creation date
+  const protocolCreatedAt = protocolData?.created_at ? new Date(protocolData.created_at) : new Date();
+  const today = new Date();
+  const daysDiff = Math.floor((today - protocolCreatedAt) / (1000 * 60 * 60 * 24));
+  const currentDayNumber = Math.min(Math.max(daysDiff + 1, 1), 30);
+
+  // Get today's objectives (current day)
+  const currentDayData = protocolDays.find(day => day.number === currentDayNumber);
+  const todayObjectives = currentDayData?.objectives || [];
 
   // Weekly data for bar chart (last 7 days)
   const weeklyData = protocolDays.slice(-7).map(day => {
@@ -403,7 +410,7 @@ export default function ProtocolScreen() {
             return (
               <button
                 key={index}
-                onClick={() => toggleObjective(30, index)}
+                onClick={() => toggleObjective(currentDayNumber, index)}
                 className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 text-left"
                 style={{
                   background: isCompleted ? '#E8A6C120' : '#FFF9FC',

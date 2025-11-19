@@ -8,6 +8,7 @@ import { protocolService } from '../../services/protocolService';
 export default function HomeScreen({ onNavigate, user }) {
   const [todayObjectives, setTodayObjectives] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentDay, setCurrentDay] = useState(1);
 
   useEffect(() => {
     loadTodayObjectives();
@@ -20,6 +21,19 @@ export default function HomeScreen({ onNavigate, user }) {
     }
 
     try {
+      const protocol = await protocolService.getUserProtocol(user.id);
+      if (!protocol) {
+        setIsLoading(false);
+        return;
+      }
+
+      const protocolCreatedAt = new Date(protocol.created_at);
+      const today = new Date();
+      const daysDiff = Math.floor((today - protocolCreatedAt) / (1000 * 60 * 60 * 24));
+      const calculatedDay = Math.min(Math.max(daysDiff + 1, 1), 30);
+
+      setCurrentDay(calculatedDay);
+
       const objectives = await protocolService.getUserObjectives(user.id);
 
       const dayGroups = objectives.reduce((acc, obj) => {
@@ -30,8 +44,7 @@ export default function HomeScreen({ onNavigate, user }) {
         return acc;
       }, {});
 
-      const lastDayNumber = Math.max(...Object.keys(dayGroups).map(Number));
-      const todayObjs = dayGroups[lastDayNumber] || [];
+      const todayObjs = dayGroups[calculatedDay] || [];
 
       setTodayObjectives(todayObjs.map(obj => ({
         id: obj.id,

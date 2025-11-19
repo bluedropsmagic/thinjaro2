@@ -20,11 +20,6 @@ export default function ThinJaroApp() {
   const [isGeneratingProtocol, setIsGeneratingProtocol] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const contentRef = useRef(null);
-  const [sharedProtocolData, setSharedProtocolData] = useState({
-    protocolDays: [],
-    isLoading: true,
-    hasCustomProtocol: false,
-  });
 
   useEffect(() => {
     checkAuthStatus();
@@ -119,32 +114,19 @@ export default function ThinJaroApp() {
   const renderScreen = () => {
     switch (currentScreen) {
       case 'home':
-        return <HomeScreen
-          onNavigate={handleNavigate}
-          user={user}
-          protocolData={sharedProtocolData}
-          onProtocolUpdate={setSharedProtocolData}
-        />;
+        return <HomeScreen onNavigate={handleNavigate} user={user} />;
       case 'exercises':
         return <ExercisesScreen />;
       case 'channels':
         return <ChannelsScreen />;
       case 'protocol':
-        return <ProtocolScreen
-          protocolData={sharedProtocolData}
-          onProtocolUpdate={setSharedProtocolData}
-        />;
+        return <ProtocolScreen />;
       case 'journal':
         return <JournalScreen />;
       case 'settings':
         return <SettingsScreen user={user} onLogout={handleLogout} />;
       default:
-        return <HomeScreen
-          onNavigate={handleNavigate}
-          user={user}
-          protocolData={sharedProtocolData}
-          onProtocolUpdate={setSharedProtocolData}
-        />;
+        return <HomeScreen onNavigate={handleNavigate} user={user} />;
     }
   };
 

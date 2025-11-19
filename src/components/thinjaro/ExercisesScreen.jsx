@@ -22,7 +22,7 @@ export default function ExercisesScreen() {
       const protocol = await protocolService.getUserProtocol(user.id);
       if (!protocol) return;
 
-      const objectives = await protocolService.getUserObjectives(user);
+      const objectives = await protocolService.getUserObjectives(user.id);
       const exerciseObjectives = objectives.filter(obj => obj.objective_type === 'exercise');
 
       const uniqueExercises = [];

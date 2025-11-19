@@ -91,17 +91,44 @@ const DayDetail = ({ day, onClose, onToggleObjective }) => {
   );
 };
 
-export default function ProtocolScreen() {
+export default function ProtocolScreen({ protocolData: sharedData, onProtocolUpdate }) {
   const [selectedDay, setSelectedDay] = useState(null);
   const [isGeneratingProtocol, setIsGeneratingProtocol] = useState(false);
-  const [hasCustomProtocol, setHasCustomProtocol] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [protocolData, setProtocolData] = useState(null);
-  const [protocolDays, setProtocolDays] = useState([]);
+  const [protocolDataDetails, setProtocolDataDetails] = useState(null);
+
+  const protocolDays = sharedData?.protocolDays || [];
+  const isLoading = sharedData?.isLoading ?? true;
+  const hasCustomProtocol = sharedData?.hasCustomProtocol ?? false;
+
+  const setProtocolDays = (days) => {
+    const newDays = typeof days === 'function' ? days(protocolDays) : days;
+    onProtocolUpdate?.({
+      ...sharedData,
+      protocolDays: newDays,
+    });
+  };
+
+  const setIsLoading = (loading) => {
+    onProtocolUpdate?.({
+      ...sharedData,
+      isLoading: loading,
+    });
+  };
+
+  const setHasCustomProtocol = (hasCustom) => {
+    onProtocolUpdate?.({
+      ...sharedData,
+      hasCustomProtocol: hasCustom,
+    });
+  };
 
   useEffect(() => {
-    loadUserProtocol();
+    if (protocolDays.length === 0 && !isLoading) {
+      loadUserProtocol();
+    } else if (protocolDays.length === 0 && isLoading) {
+      loadUserProtocol();
+    }
   }, []);
 
   const loadUserProtocol = async () => {
@@ -113,7 +140,7 @@ export default function ProtocolScreen() {
 
       const protocol = await protocolService.getUserProtocol(currentUser.id);
       if (protocol) {
-        setProtocolData(protocol);
+        setProtocolDataDetails(protocol);
         setHasCustomProtocol(true);
         await loadProtocolDays(currentUser.id);
       }

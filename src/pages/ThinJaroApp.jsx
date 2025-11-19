@@ -20,6 +20,12 @@ export default function ThinJaroApp() {
   const [isGeneratingProtocol, setIsGeneratingProtocol] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const contentRef = useRef(null);
+  const [sharedProtocolData, setSharedProtocolData] = useState({
+    protocolDays: [],
+    isLoading: true,
+    hasCustomProtocol: false,
+  });
+  const screenCache = useRef({});
 
   useEffect(() => {
     checkAuthStatus();
@@ -112,22 +118,41 @@ export default function ThinJaroApp() {
   ];
 
   const renderScreen = () => {
-    switch (currentScreen) {
-      case 'home':
-        return <HomeScreen onNavigate={handleNavigate} user={user} />;
-      case 'exercises':
-        return <ExercisesScreen />;
-      case 'channels':
-        return <ChannelsScreen />;
-      case 'protocol':
-        return <ProtocolScreen />;
-      case 'journal':
-        return <JournalScreen />;
-      case 'settings':
-        return <SettingsScreen user={user} onLogout={handleLogout} />;
-      default:
-        return <HomeScreen onNavigate={handleNavigate} user={user} />;
+    const screens = {
+      home: <HomeScreen
+        onNavigate={handleNavigate}
+        user={user}
+        protocolData={sharedProtocolData}
+        onProtocolUpdate={setSharedProtocolData}
+      />,
+      exercises: <ExercisesScreen />,
+      channels: <ChannelsScreen />,
+      protocol: <ProtocolScreen
+        protocolData={sharedProtocolData}
+        onProtocolUpdate={setSharedProtocolData}
+      />,
+      journal: <JournalScreen />,
+      settings: <SettingsScreen user={user} onLogout={handleLogout} />,
+    };
+
+    if (!screenCache.current[currentScreen]) {
+      screenCache.current[currentScreen] = screens[currentScreen] || screens.home;
     }
+
+    return (
+      <div style={{ display: 'contents' }}>
+        {Object.keys(screens).map(screenName => (
+          <div
+            key={screenName}
+            style={{
+              display: screenName === currentScreen ? 'block' : 'none'
+            }}
+          >
+            {screenName === currentScreen ? screens[screenName] : screenCache.current[screenName]}
+          </div>
+        ))}
+      </div>
+    );
   };
 
   if (isCheckingAuth) {

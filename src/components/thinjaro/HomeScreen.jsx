@@ -1,21 +1,63 @@
-import React, { useState } from 'react';
-import { Droplets, Footprints, Dumbbell, Moon, Heart, CheckCircle2, Circle, Sparkles, Play, BookOpen, Activity } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Droplets, Dumbbell, Apple, Moon, Heart, CheckCircle2, Circle, Sparkles, Play, BookOpen, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProgressRing from './ProgressRing';
+import { protocolService } from '../../services/protocolService';
+import { supabase } from '../../lib/supabase';
 
-export default function HomeScreen({ onNavigate, user }) {
-  const [checklist, setChecklist] = useState([
-    { id: 1, label: 'Morning hydration', icon: Droplets, completed: true },
-    { id: 2, label: '8,000 steps', icon: Footprints, completed: true },
-    { id: 3, label: 'Morning exercises', icon: Dumbbell, completed: false },
-    { id: 4, label: 'Evening routine', icon: Moon, completed: false },
-    { id: 5, label: 'Mindfulness practice', icon: Heart, completed: true },
-  ]);
+export default function HomeScreen({ onNavigate, user, protocolData, onProtocolUpdate }) {
+  const protocolDays = protocolData?.protocolDays || [];
+  const currentDayNumber = protocolDays.length > 0 ? 1 : 1;
+  const todayObjectives = protocolDays.find(d => d.number === currentDayNumber)?.objectives || [];
 
-  const toggleChecklistItem = (id) => {
-    setChecklist(checklist.map(item => 
-      item.id === id ? { ...item, completed: !item.completed } : item
-    ));
+  const objectiveIcons = {
+    hydration: Droplets,
+    exercise: Dumbbell,
+    nutrition: Apple,
+    sleep: Moon,
+    mindfulness: Heart,
+  };
+
+  const toggleChecklistItem = async (objectiveIndex) => {
+    if (todayObjectives.length === 0) return;
+
+    const objective = todayObjectives[objectiveIndex];
+    if (!objective || !objective.id) return;
+
+    const newCompletedState = !objective.completed;
+
+    const updatedDays = protocolDays.map(d =>
+      d.number === currentDayNumber
+        ? {
+            ...d,
+            objectives: d.objectives.map((obj, idx) =>
+              idx === objectiveIndex ? { ...obj, completed: newCompletedState } : obj
+            ),
+          }
+        : d
+    );
+
+    onProtocolUpdate?.({
+      ...protocolData,
+      protocolDays: updatedDays,
+    });
+
+    try {
+      const { error } = await supabase
+        .from('user_objectives')
+        .update({ completed: newCompletedState })
+        .eq('id', objective.id);
+
+      if (error) {
+        console.error('Error updating objective:', error);
+        onProtocolUpdate?.({
+          ...protocolData,
+          protocolDays: protocolDays,
+        });
+      }
+    } catch (err) {
+      console.error('Error:', err);
+    }
   };
 
   const progressData = [
@@ -76,39 +118,48 @@ export default function HomeScreen({ onNavigate, user }) {
         }}
       >
         <h2 className="text-xl font-semibold mb-4 text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>
-          Today's Checklist
+          Today's Journey
         </h2>
         <div className="space-y-3">
-          {checklist.map((item, index) => {
-            const Icon = item.icon;
-            return (
-              <motion.button
-                key={item.id}
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.1 * index }}
-                onClick={() => toggleChecklistItem(item.id)}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300"
-                style={{
-                  background: item.completed ? 'linear-gradient(135deg, #F5D4E4 0%, #E8A6C1 100%)' : '#FFF9FC',
-                  boxShadow: item.completed
-                    ? 'inset 3px 3px 8px rgba(232, 166, 193, 0.3), inset -3px -3px 8px rgba(255, 255, 255, 0.8)'
-                    : '4px 4px 12px rgba(232, 166, 193, 0.15), -4px -4px 12px rgba(255, 255, 255, 0.8)',
-                }}
-              >
-                {item.completed ? (
-                  <CheckCircle2 size={24} className="text-gray-800" strokeWidth={2} />
-                ) : (
-                  <Circle size={24} className="text-gray-300" strokeWidth={2} />
-                )}
-                <Icon size={20} className={item.completed ? 'text-gray-800' : 'text-[#E8A6C1]'} />
-                <span className={`font-medium ${item.completed ? 'text-gray-800' : 'text-gray-700'}`}>
-                  {item.label}
-                </span>
-              </motion.button>
-            );
-          })}
-        </div>
+          {todayObjectives.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">Loading your daily objectives...</p>
+          ) : (
+            todayObjectives.map((objective, index) => {
+              const Icon = objectiveIcons[objective.type] || Heart;
+              return (
+                <motion.button
+                  key={index}
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.1 * index }}
+                  onClick={() => toggleChecklistItem(index)}
+                  className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300"
+                    style={{
+                      background: objective.completed ? 'linear-gradient(135deg, #F5D4E4 0%, #E8A6C1 100%)' : '#FFF9FC',
+                      boxShadow: objective.completed
+                        ? 'inset 3px 3px 8px rgba(232, 166, 193, 0.3), inset -3px -3px 8px rgba(255, 255, 255, 0.8)'
+                        : '4px 4px 12px rgba(232, 166, 193, 0.15), -4px -4px 12px rgba(255, 255, 255, 0.8)',
+                    }}
+                  >
+                    {objective.completed ? (
+                      <CheckCircle2 size={24} className="text-gray-800" strokeWidth={2} />
+                    ) : (
+                      <Circle size={24} className="text-gray-300" strokeWidth={2} />
+                    )}
+                    <Icon size={20} className={objective.completed ? 'text-gray-800' : 'text-[#E8A6C1]'} />
+                    <div className="flex-1 text-left">
+                      <span className={`font-medium block ${objective.completed ? 'text-gray-800' : 'text-gray-700'}`}>
+                        {objective.title}
+                      </span>
+                      <span className={`text-xs ${objective.completed ? 'text-gray-600' : 'text-gray-500'}`}>
+                        {objective.description}
+                      </span>
+                    </div>
+                  </motion.button>
+                );
+              })
+            )}
+          </div>
       </motion.div>
 
       {/* Progress Rings */}

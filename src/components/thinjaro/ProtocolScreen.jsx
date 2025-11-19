@@ -98,54 +98,7 @@ export default function ProtocolScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [protocolData, setProtocolData] = useState(null);
-  const [protocolDays, setProtocolDays] = useState(() => {
-    const days = [];
-    const today = new Date();
-    
-    for (let i = 1; i <= 30; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - (30 - i));
-      
-      days.push({
-        number: i,
-        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        objectives: [
-          {
-            type: 'hydration',
-            title: 'Morning Hydration',
-            description: '2 glasses of water upon waking',
-            completed: i < 25 ? Math.random() > 0.3 : false,
-          },
-          {
-            type: 'exercise',
-            title: 'Daily Exercise',
-            description: '15-20 minutes home workout',
-            completed: i < 25 ? Math.random() > 0.4 : false,
-          },
-          {
-            type: 'nutrition',
-            title: 'Healthy Meals',
-            description: '3 balanced meals, avoid processed foods',
-            completed: i < 25 ? Math.random() > 0.3 : false,
-          },
-          {
-            type: 'sleep',
-            title: 'Quality Sleep',
-            description: '7-8 hours of restful sleep',
-            completed: i < 25 ? Math.random() > 0.5 : false,
-          },
-          {
-            type: 'mindfulness',
-            title: 'Mindfulness Practice',
-            description: '5 minutes of meditation or breathing',
-            completed: i < 25 ? Math.random() > 0.4 : false,
-          },
-        ],
-      });
-    }
-    
-    return days;
-  });
+  const [protocolDays, setProtocolDays] = useState([]);
 
   useEffect(() => {
     loadUserProtocol();
@@ -604,9 +557,10 @@ export default function ProtocolScreen() {
       </motion.div>
 
       {/* Day Detail Modal */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {selectedDay && (
           <DayDetail
+            key={selectedDay.number}
             day={selectedDay}
             onClose={() => setSelectedDay(null)}
             onToggleObjective={toggleObjective}

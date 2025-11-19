@@ -67,7 +67,15 @@ export default function ThinJaroApp() {
     setIsGeneratingProtocol(true);
 
     try {
+      const startTime = Date.now();
+
       await protocolService.generateProtocol(supabaseUser.id);
+
+      const elapsed = Date.now() - startTime;
+      const remainingTime = Math.max(0, 10000 - elapsed);
+
+      await new Promise(resolve => setTimeout(resolve, remainingTime));
+
       setCurrentScreen('home');
     } catch (error) {
       console.error('Error generating protocol:', error);

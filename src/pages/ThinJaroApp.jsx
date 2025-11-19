@@ -191,7 +191,7 @@ export default function ThinJaroApp() {
   // Logged in - show app
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFF9FC] via-[#F5D4E4] to-[#E8A6C1] fixed inset-0">
-      <div className="max-w-md mx-auto h-full bg-[#FFF9FC] relative flex flex-col overflow-hidden">
+      <div className="max-w-md mx-auto w-full h-full bg-[#FFF9FC] relative flex flex-col overflow-hidden">
         {/* Header */}
         <Header onProfileClick={() => handleNavigate('settings')} />
 

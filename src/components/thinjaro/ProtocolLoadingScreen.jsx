@@ -4,10 +4,10 @@ import { Sparkles, Heart, Zap, Target } from 'lucide-react';
 import ThinJaroLogo from './ThinJaroLogo';
 
 const loadingMessages = [
-  { text: 'Analisando suas respostas', icon: Sparkles },
-  { text: 'Criando seu protocolo personalizado', icon: Heart },
-  { text: 'Ajustando objetivos diários', icon: Target },
-  { text: 'Quase pronto', icon: Zap },
+  { text: 'Analyzing your responses', icon: Sparkles },
+  { text: 'Creating your personalized protocol', icon: Heart },
+  { text: 'Adjusting daily objectives', icon: Target },
+  { text: 'Almost ready', icon: Zap },
 ];
 
 export default function ProtocolLoadingScreen() {

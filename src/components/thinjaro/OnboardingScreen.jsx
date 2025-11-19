@@ -6,53 +6,53 @@ import ThinJaroLogo from './ThinJaroLogo';
 const questions = [
   {
     id: 'goal',
-    question: 'Qual é seu principal objetivo?',
+    question: 'What is your main goal?',
     options: [
-      'Perder peso',
-      'Ganhar massa muscular',
-      'Melhorar saúde geral',
-      'Aumentar energia',
-      'Reduzir estresse',
+      'Lose weight',
+      'Gain muscle mass',
+      'Improve overall health',
+      'Increase energy',
+      'Reduce stress',
     ],
   },
   {
     id: 'activity_level',
-    question: 'Qual é seu nível de atividade atual?',
+    question: 'What is your current activity level?',
     options: [
-      'Sedentário (pouco ou nenhum exercício)',
-      'Levemente ativo (1-3 dias/semana)',
-      'Moderadamente ativo (3-5 dias/semana)',
-      'Muito ativo (6-7 dias/semana)',
+      'Sedentary (little or no exercise)',
+      'Lightly active (1-3 days/week)',
+      'Moderately active (3-5 days/week)',
+      'Very active (6-7 days/week)',
     ],
   },
   {
     id: 'sleep',
-    question: 'Quantas horas você dorme por noite?',
+    question: 'How many hours do you sleep per night?',
     options: [
-      'Menos de 5 horas',
-      '5-6 horas',
-      '7-8 horas',
-      'Mais de 8 horas',
+      'Less than 5 hours',
+      '5-6 hours',
+      '7-8 hours',
+      'More than 8 hours',
     ],
   },
   {
     id: 'water',
-    question: 'Quanta água você bebe por dia?',
+    question: 'How much water do you drink per day?',
     options: [
-      'Menos de 1 litro',
-      '1-2 litros',
-      '2-3 litros',
-      'Mais de 3 litros',
+      'Less than 1 liter',
+      '1-2 liters',
+      '2-3 liters',
+      'More than 3 liters',
     ],
   },
   {
     id: 'diet',
-    question: 'Como você descreveria sua alimentação?',
+    question: 'How would you describe your eating habits?',
     options: [
-      'Irregular e sem planejamento',
-      'Como quando tenho fome',
-      'Tento comer bem mas nem sempre consigo',
-      'Tenho uma rotina alimentar saudável',
+      'Irregular and unplanned',
+      'I eat when I\'m hungry',
+      'I try to eat well but don\'t always succeed',
+      'I have a healthy eating routine',
     ],
   },
 ];
@@ -113,11 +113,11 @@ export default function OnboardingScreen({ onComplete, isGenerating }) {
               </div>
 
               <h1 className="text-3xl font-bold text-gray-800 mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                Bem-vinda!
+                Welcome!
               </h1>
 
               <p className="text-gray-700 text-lg mb-6">
-                Vamos criar seu protocolo personalizado de 30 dias
+                Let's create your personalized 30-day protocol
               </p>
 
               <div
@@ -128,7 +128,7 @@ export default function OnboardingScreen({ onComplete, isGenerating }) {
                 }}
               >
                 <p className="text-sm text-gray-600 leading-relaxed">
-                  Responda algumas perguntas rápidas para que possamos entender melhor seus objetivos e criar um plano totalmente personalizado para você.
+                  Answer a few quick questions so we can better understand your goals and create a fully personalized plan for you.
                 </p>
               </div>
 
@@ -140,7 +140,7 @@ export default function OnboardingScreen({ onComplete, isGenerating }) {
                   boxShadow: '8px 8px 24px rgba(232, 166, 193, 0.4)',
                 }}
               >
-                Começar
+                Get Started
               </button>
             </motion.div>
           </div>
@@ -168,7 +168,7 @@ export default function OnboardingScreen({ onComplete, isGenerating }) {
             </button>
 
             <span className="text-sm font-semibold text-gray-700">
-              {currentQuestion + 1} de {questions.length}
+              {currentQuestion + 1} of {questions.length}
             </span>
           </div>
 
@@ -240,11 +240,11 @@ export default function OnboardingScreen({ onComplete, isGenerating }) {
                   {isGenerating ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Gerando seu protocolo...
+                      Generating your protocol...
                     </>
                   ) : (
                     <>
-                      Criar meu protocolo
+                      Create my protocol
                       <ChevronRight size={20} />
                     </>
                   )}

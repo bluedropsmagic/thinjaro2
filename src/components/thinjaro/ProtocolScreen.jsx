@@ -213,9 +213,17 @@ export default function ProtocolScreen() {
 
   const toggleObjective = async (dayNumber, objectiveIndex) => {
     const day = protocolDays.find(d => d.number === dayNumber);
-    if (!day) return;
+    if (!day) {
+      console.log('Day not found:', dayNumber);
+      return;
+    }
 
     const objective = day.objectives[objectiveIndex];
+    if (!objective) {
+      console.log('Objective not found:', objectiveIndex);
+      return;
+    }
+
     const newCompletedState = !objective.completed;
 
     setProtocolDays(prevDays =>
@@ -231,9 +239,21 @@ export default function ProtocolScreen() {
       )
     );
 
+    if (selectedDay) {
+      setSelectedDay({
+        ...selectedDay,
+        objectives: selectedDay.objectives.map((obj, idx) =>
+          idx === objectiveIndex ? { ...obj, completed: newCompletedState } : obj
+        ),
+      });
+    }
+
     try {
       if (objective.id) {
+        console.log('Updating objective:', objective.id, newCompletedState);
         await protocolService.updateObjectiveCompletion(objective.id, newCompletedState);
+      } else {
+        console.warn('No objective ID, skipping database update');
       }
     } catch (error) {
       console.error('Error updating objective:', error);
@@ -249,18 +269,26 @@ export default function ProtocolScreen() {
             : d
         )
       );
+      if (selectedDay) {
+        setSelectedDay({
+          ...selectedDay,
+          objectives: selectedDay.objectives.map((obj, idx) =>
+            idx === objectiveIndex ? { ...obj, completed: !newCompletedState } : obj
+          ),
+        });
+      }
     }
   };
 
   const handleGenerateProtocol = async (answers) => {
     if (!user) {
-      alert('Você precisa estar logado para gerar um protocolo.');
+      alert('You need to be logged in to generate a protocol.');
       return;
     }
 
     const regenerationCheck = await protocolService.canRegenerateProtocol(user.id);
     if (!regenerationCheck.canRegenerate) {
-      alert(`Você só pode regenerar seu protocolo após 30 dias.\nDias restantes: ${regenerationCheck.daysRemaining}`);
+      alert(`You can only regenerate your protocol after 30 days.\nDays remaining: ${regenerationCheck.daysRemaining}`);
       setShowQuestionnaire(false);
       return;
     }
@@ -273,7 +301,7 @@ export default function ProtocolScreen() {
       await loadUserProtocol();
     } catch (error) {
       console.error('Error generating protocol:', error);
-      alert(`Erro ao gerar protocolo: ${error.message}\n\nPor favor, tente novamente.`);
+      alert(`Error generating protocol: ${error.message}\n\nPlease try again.`);
       setShowQuestionnaire(true);
     } finally {
       setIsGeneratingProtocol(false);
@@ -350,10 +378,10 @@ export default function ProtocolScreen() {
           </div>
           <div>
             <h3 className="text-lg font-bold text-white">
-              {hasCustomProtocol ? 'Gerar Novo Protocolo' : 'Gerar Protocolo Personalizado'}
+              {hasCustomProtocol ? 'Generate New Protocol' : 'Generate Personalized Protocol'}
             </h3>
             <p className="text-sm text-white/90">
-              {hasCustomProtocol ? 'Criar outro protocolo com IA' : 'Criado especialmente para você com IA'}
+              {hasCustomProtocol ? 'Create another AI protocol' : 'Created especially for you with AI'}
             </p>
           </div>
         </div>

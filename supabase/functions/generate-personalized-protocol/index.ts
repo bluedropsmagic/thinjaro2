@@ -7,11 +7,11 @@ const corsHeaders = {
 };
 
 const mockObjectives = {
-  hydration: { title: "Hidratação", description: "Beba 2 litros de água hoje" },
-  exercise: { title: "Exercício", description: "15 minutos de atividade física" },
-  nutrition: { title: "Alimentação", description: "3 refeições balanceadas" },
-  sleep: { title: "Sono", description: "Durma 7-8 horas" },
-  mindfulness: { title: "Mindfulness", description: "5 minutos de meditação" }
+  hydration: { title: "Hydration", description: "Drink 2 liters of water today" },
+  exercise: { title: "Exercise", description: "15 minutes of physical activity" },
+  nutrition: { title: "Nutrition", description: "3 balanced meals" },
+  sleep: { title: "Sleep", description: "Get 7-8 hours of sleep" },
+  mindfulness: { title: "Mindfulness", description: "5 minutes of meditation" }
 };
 
 Deno.serve(async (req: Request) => {
@@ -30,8 +30,8 @@ Deno.serve(async (req: Request) => {
       throw new Error("OPENAI_API_KEY not configured");
     }
 
-    const systemPrompt = `Gere objetivos personalizados APENAS para os 3 primeiros dias.
-Retorne SOMENTE JSON válido:
+    const systemPrompt = `Generate personalized objectives ONLY for the first 3 days.
+Return ONLY valid JSON:
 {
   "days": [
     {"day": 1, "objectives": {"hydration": {"title": "...", "description": "..."}, "exercise": {...}, "nutrition": {...}, "sleep": {...}, "mindfulness": {...}}},
@@ -50,7 +50,7 @@ Retorne SOMENTE JSON válido:
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Perfil: ${JSON.stringify(userData)}` }
+          { role: "user", content: `Profile: ${JSON.stringify(userData)}` }
         ],
         temperature: 0.3,
         max_tokens: 1000,

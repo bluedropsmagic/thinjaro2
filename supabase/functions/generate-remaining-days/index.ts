@@ -23,13 +23,13 @@ Deno.serve(async (req: Request) => {
       throw new Error("OPENAI_API_KEY not configured");
     }
 
-    const systemPrompt = `Gere objetivos personalizados para dias 4-30 (27 dias).
-Divida em 3 fases progressivas:
-- Dias 4-13: Nível Iniciante
-- Dias 14-23: Nível Intermediário
-- Dias 24-30: Nível Avançado
+    const systemPrompt = `Generate personalized objectives for days 4-30 (27 days).
+Divide into 3 progressive phases:
+- Days 4-13: Beginner Level
+- Days 14-23: Intermediate Level
+- Days 24-30: Advanced Level
 
-Retorne SOMENTE JSON:
+Return ONLY JSON:
 {
   "phases": [
     {"days": "4-13", "objectives": {"hydration": {"title": "...", "description": "..."}, ...}},
@@ -48,7 +48,7 @@ Retorne SOMENTE JSON:
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Perfil: ${JSON.stringify(userData)}` }
+          { role: "user", content: `Profile: ${JSON.stringify(userData)}` }
         ],
         temperature: 0.3,
         max_tokens: 2000,

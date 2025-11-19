@@ -270,7 +270,7 @@ export default function ProtocolScreen() {
     (sum, day) => sum + day.objectives.filter(obj => obj.completed).length,
     0
   );
-  const completionPercentage = Math.round((completedObjectives / totalObjectives) * 100);
+  const completionPercentage = totalObjectives > 0 ? Math.round((completedObjectives / totalObjectives) * 100) : 0;
 
   // Calculate streak
   let streak = 0;
@@ -298,6 +298,14 @@ export default function ProtocolScreen() {
       height: `${Math.max(value, 10)}%`,
     };
   });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#FFF9FC] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[#F5D4E4] border-t-[#E8A6C1] rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FFF9FC] p-6 pb-24">

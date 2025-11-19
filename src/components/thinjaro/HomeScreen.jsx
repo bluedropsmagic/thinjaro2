@@ -1,21 +1,74 @@
-import React, { useState } from 'react';
-import { Droplets, Footprints, Dumbbell, Moon, Heart, CheckCircle2, Circle, Sparkles, Play, BookOpen, Activity } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Droplets, Dumbbell, Apple, Moon, Heart, CheckCircle2, Circle, Sparkles, Play, BookOpen, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProgressRing from './ProgressRing';
+import { supabase } from '../../lib/supabase';
+import { protocolService } from '../../services/protocolService';
 
 export default function HomeScreen({ onNavigate, user }) {
-  const [checklist, setChecklist] = useState([
-    { id: 1, label: 'Morning hydration', icon: Droplets, completed: true },
-    { id: 2, label: '8,000 steps', icon: Footprints, completed: true },
-    { id: 3, label: 'Morning exercises', icon: Dumbbell, completed: false },
-    { id: 4, label: 'Evening routine', icon: Moon, completed: false },
-    { id: 5, label: 'Mindfulness practice', icon: Heart, completed: true },
-  ]);
+  const [todayObjectives, setTodayObjectives] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const toggleChecklistItem = (id) => {
-    setChecklist(checklist.map(item => 
-      item.id === id ? { ...item, completed: !item.completed } : item
-    ));
+  useEffect(() => {
+    loadTodayObjectives();
+  }, [user]);
+
+  const loadTodayObjectives = async () => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const objectives = await protocolService.getUserObjectives(user.id);
+
+      const dayGroups = objectives.reduce((acc, obj) => {
+        if (!acc[obj.day_number]) {
+          acc[obj.day_number] = [];
+        }
+        acc[obj.day_number].push(obj);
+        return acc;
+      }, {});
+
+      const lastDayNumber = Math.max(...Object.keys(dayGroups).map(Number));
+      const todayObjs = dayGroups[lastDayNumber] || [];
+
+      setTodayObjectives(todayObjs.map(obj => ({
+        id: obj.id,
+        type: obj.objective_type,
+        title: obj.title,
+        description: obj.description,
+        completed: obj.completed,
+      })));
+    } catch (error) {
+      console.error('Error loading today objectives:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleObjective = async (objectiveId) => {
+    const objective = todayObjectives.find(obj => obj.id === objectiveId);
+    if (!objective) return;
+
+    const newCompletedState = !objective.completed;
+
+    setTodayObjectives(prev =>
+      prev.map(obj =>
+        obj.id === objectiveId ? { ...obj, completed: newCompletedState } : obj
+      )
+    );
+
+    try {
+      await protocolService.updateObjectiveCompletion(objectiveId, newCompletedState);
+    } catch (error) {
+      console.error('Error updating objective:', error);
+      setTodayObjectives(prev =>
+        prev.map(obj =>
+          obj.id === objectiveId ? { ...obj, completed: !newCompletedState } : obj
+        )
+      );
+    }
   };
 
   const progressData = [
@@ -30,6 +83,14 @@ export default function HomeScreen({ onNavigate, user }) {
     { label: 'Channels', icon: Play, screen: 'channels', color: '#C9A6E8' },
     { label: 'Journal', icon: BookOpen, screen: 'journal', color: '#F5D4E4' },
   ];
+
+  const objectiveIcons = {
+    hydration: Droplets,
+    exercise: Dumbbell,
+    nutrition: Apple,
+    sleep: Moon,
+    mindfulness: Heart,
+  };
 
   const firstName = user?.full_name?.split(' ')[0] || 'User';
 
@@ -48,7 +109,7 @@ export default function HomeScreen({ onNavigate, user }) {
             {firstName}! 👋
           </h1>
         </motion.div>
-        
+
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -64,7 +125,7 @@ export default function HomeScreen({ onNavigate, user }) {
         </motion.div>
       </div>
 
-      {/* Daily Checklist Card */}
+      {/* Today's Journey */}
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -76,39 +137,59 @@ export default function HomeScreen({ onNavigate, user }) {
         }}
       >
         <h2 className="text-xl font-semibold mb-4 text-gray-800" style={{ fontFamily: 'Poppins, sans-serif' }}>
-          Today's Checklist
+          Today's Journey
         </h2>
-        <div className="space-y-3">
-          {checklist.map((item, index) => {
-            const Icon = item.icon;
-            return (
-              <motion.button
-                key={item.id}
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.1 * index }}
-                onClick={() => toggleChecklistItem(item.id)}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300"
-                style={{
-                  background: item.completed ? 'linear-gradient(135deg, #F5D4E4 0%, #E8A6C1 100%)' : '#FFF9FC',
-                  boxShadow: item.completed
-                    ? 'inset 3px 3px 8px rgba(232, 166, 193, 0.3), inset -3px -3px 8px rgba(255, 255, 255, 0.8)'
-                    : '4px 4px 12px rgba(232, 166, 193, 0.15), -4px -4px 12px rgba(255, 255, 255, 0.8)',
-                }}
-              >
-                {item.completed ? (
-                  <CheckCircle2 size={24} className="text-gray-800" strokeWidth={2} />
-                ) : (
-                  <Circle size={24} className="text-gray-300" strokeWidth={2} />
-                )}
-                <Icon size={20} className={item.completed ? 'text-gray-800' : 'text-[#E8A6C1]'} />
-                <span className={`font-medium ${item.completed ? 'text-gray-800' : 'text-gray-700'}`}>
-                  {item.label}
-                </span>
-              </motion.button>
-            );
-          })}
-        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-8 h-8 border-4 border-[#F5D4E4] border-t-[#E8A6C1] rounded-full animate-spin" />
+          </div>
+        ) : todayObjectives.length === 0 ? (
+          <div className="text-center py-8 text-gray-600">
+            <p className="mb-2">No objectives for today</p>
+            <button
+              onClick={() => onNavigate('protocol')}
+              className="text-[#E8A6C1] font-semibold hover:underline"
+            >
+              Generate your protocol
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {todayObjectives.map((objective, index) => {
+              const Icon = objectiveIcons[objective.type];
+              const isCompleted = objective.completed;
+              return (
+                <motion.button
+                  key={objective.id}
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.1 * index }}
+                  onClick={() => toggleObjective(objective.id)}
+                  className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 text-left"
+                  style={{
+                    background: isCompleted ? '#E8A6C120' : '#FFF9FC',
+                    boxShadow: isCompleted
+                      ? 'inset 3px 3px 8px rgba(232, 166, 193, 0.2), inset -3px -3px 8px rgba(255, 255, 255, 0.8)'
+                      : '4px 4px 12px rgba(232, 166, 193, 0.15), -4px -4px 12px rgba(255, 255, 255, 0.8)',
+                  }}
+                >
+                  {isCompleted ? (
+                    <CheckCircle2 size={24} className="text-[#E8A6C1] flex-shrink-0" strokeWidth={2} />
+                  ) : (
+                    <Circle size={24} className="text-gray-300 flex-shrink-0" strokeWidth={2} />
+                  )}
+                  <Icon size={20} className={isCompleted ? 'text-[#E8A6C1]' : 'text-gray-400'} />
+                  <div className="flex-1">
+                    <h3 className={`font-semibold ${isCompleted ? 'text-gray-800' : 'text-gray-700'}`}>
+                      {objective.title}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-0.5">{objective.description}</p>
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
       </motion.div>
 
       {/* Progress Rings */}

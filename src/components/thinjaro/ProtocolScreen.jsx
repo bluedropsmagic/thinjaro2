@@ -124,11 +124,7 @@ export default function ProtocolScreen({ protocolData: sharedData, onProtocolUpd
   };
 
   useEffect(() => {
-    if (protocolDays.length === 0 && !isLoading) {
-      loadUserProtocol();
-    } else if (protocolDays.length === 0 && isLoading) {
-      loadUserProtocol();
-    }
+    loadUserProtocol();
   }, []);
 
   const loadUserProtocol = async () => {

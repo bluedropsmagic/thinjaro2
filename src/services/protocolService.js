@@ -39,25 +39,15 @@ export const protocolService = {
     };
   },
 
-  async generateProtocol(userId, quizAnswers) {
-    const { data: { session } } = await supabase.auth.getSession();
-    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-personalized-protocol`;
+  async generateProtocol(userId) {
+    const { baseProtocol } = await import('./baseProtocol.js');
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify(quizAnswers),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || 'Failed to generate protocol');
-    }
-
-    const protocolData = await response.json();
+    const protocolData = {
+      overall_completion: 0,
+      day_streak: 0,
+      todays_journey: baseProtocol.protocol_30_days[0].objectives,
+      protocol_30_days: baseProtocol.protocol_30_days
+    };
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -67,7 +57,7 @@ export const protocolService = {
       .upsert({
         user_id: userId,
         protocol_data: protocolData,
-        quiz_answers: quizAnswers,
+        quiz_answers: {},
         created_at: now.toISOString(),
         last_regenerated_at: now.toISOString(),
         expires_at: expiresAt.toISOString(),

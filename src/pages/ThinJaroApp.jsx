@@ -17,7 +17,6 @@ export default function ThinJaroApp() {
   const [currentScreen, setCurrentScreen] = useState('home');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
-  const [showOnboardingQuiz, setShowOnboardingQuiz] = useState(false);
   const [isGeneratingProtocol, setIsGeneratingProtocol] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const contentRef = useRef(null);
@@ -65,54 +64,19 @@ export default function ThinJaroApp() {
   const handleSignupComplete = async (supabaseUser) => {
     setUser(supabaseUser);
     setIsLoggedIn(true);
-
-    const protocol = await protocolService.getUserProtocol(supabaseUser.id);
-    if (!protocol) {
-      setShowOnboardingQuiz(true);
-    } else {
-      setCurrentScreen('home');
-    }
-  };
-
-  const handleQuizSubmit = async (answers) => {
-    setShowOnboardingQuiz(false);
     setIsGeneratingProtocol(true);
 
     try {
-      await protocolService.generateProtocol(user.id, answers);
+      await protocolService.generateProtocol(supabaseUser.id);
       setCurrentScreen('home');
-
-      setTimeout(async () => {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-remaining-days`;
-
-          await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({
-              userId: user.id,
-              userData: answers
-            }),
-          });
-
-          console.log('Background generation completed');
-        } catch (bgError) {
-          console.error('Background generation error:', bgError);
-        }
-      }, 2000);
-
     } catch (error) {
       console.error('Error generating protocol:', error);
-      alert(`Erro ao gerar protocolo: ${error.message}`);
-      setShowOnboardingQuiz(true);
+      alert(`Error generating protocol: ${error.message}`);
     } finally {
       setIsGeneratingProtocol(false);
     }
   };
+
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -179,14 +143,6 @@ export default function ThinJaroApp() {
     return <ProtocolLoadingScreen />;
   }
 
-  if (showOnboardingQuiz) {
-    return (
-      <OnboardingScreen
-        onComplete={handleQuizSubmit}
-        isGenerating={isGeneratingProtocol}
-      />
-    );
-  }
 
   // Logged in - show app
   return (

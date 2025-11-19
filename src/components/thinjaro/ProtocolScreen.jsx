@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, TrendingUp, X, CheckCircle2, Circle, Droplets, Dumbbell, Apple, Moon, Heart, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import QuestionnaireModal from './QuestionnaireModal';
 import { supabase } from '../../lib/supabase';
 import { protocolService } from '../../services/protocolService';
 
@@ -94,7 +93,6 @@ const DayDetail = ({ day, onClose, onToggleObjective }) => {
 
 export default function ProtocolScreen() {
   const [selectedDay, setSelectedDay] = useState(null);
-  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
   const [isGeneratingProtocol, setIsGeneratingProtocol] = useState(false);
   const [hasCustomProtocol, setHasCustomProtocol] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -280,7 +278,7 @@ export default function ProtocolScreen() {
     }
   };
 
-  const handleGenerateProtocol = async (answers) => {
+  const handleGenerateProtocol = async () => {
     if (!user) {
       alert('You need to be logged in to generate a protocol.');
       return;
@@ -289,20 +287,17 @@ export default function ProtocolScreen() {
     const regenerationCheck = await protocolService.canRegenerateProtocol(user.id);
     if (!regenerationCheck.canRegenerate) {
       alert(`You can only regenerate your protocol after 30 days.\nDays remaining: ${regenerationCheck.daysRemaining}`);
-      setShowQuestionnaire(false);
       return;
     }
 
     setIsGeneratingProtocol(true);
-    setShowQuestionnaire(false);
 
     try {
-      await protocolService.generateProtocol(user.id, answers);
+      await protocolService.generateProtocol(user.id);
       await loadUserProtocol();
     } catch (error) {
       console.error('Error generating protocol:', error);
       alert(`Error generating protocol: ${error.message}\n\nPlease try again.`);
-      setShowQuestionnaire(true);
     } finally {
       setIsGeneratingProtocol(false);
     }
@@ -357,7 +352,7 @@ export default function ProtocolScreen() {
       <motion.button
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        onClick={() => setShowQuestionnaire(true)}
+        onClick={handleGenerateProtocol}
         className="w-full rounded-3xl p-4 mb-6 flex items-center justify-between"
         style={{
           background: hasCustomProtocol
@@ -619,12 +614,6 @@ export default function ProtocolScreen() {
         )}
       </AnimatePresence>
 
-      {/* Questionnaire Modal */}
-      <QuestionnaireModal
-        isOpen={showQuestionnaire}
-        onClose={() => setShowQuestionnaire(false)}
-        onSubmit={handleGenerateProtocol}
-      />
     </div>
   );
 }
